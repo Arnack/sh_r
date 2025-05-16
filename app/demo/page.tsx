@@ -7,6 +7,11 @@ import { DataTable } from "@/components/DataTable2"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ColumnDef } from "@tanstack/react-table"
 import { Button } from "@/components/ui/button"
+import { useState } from "react"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 
 const entities = [
     { code: "Acm Bs Corp", name: "Acme Business Corp" },
@@ -98,6 +103,17 @@ const projectColumns: ColumnDef<Project>[] = [
 ]
 
 export default function DemoPage() {
+  const [projectData, setProjectData] = useState<Project[]>(projects);
+  const [formData, setFormData] = useState<Omit<Project, 'id'>>({
+    code: '',
+    nachalo: '',
+    vidDeyatelnosti: 'Уголовное дело',
+    tema: '',
+    dlitelnost: '',
+    okruglenie: '15'
+  });
+  const [open, setOpen] = useState(false);
+
   const handleExportCSV = (data: Project[]) => {
     // Helper function to escape CSV values
     const escapeCSV = (value: string) => {
@@ -151,11 +167,42 @@ export default function DemoPage() {
     document.body.removeChild(link);
   };
 
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleSelectChange = (name: string, value: string) => {
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const newProject: Project = {
+      ...formData,
+      id: `PRJ${String(projectData.length + 1).padStart(3, '0')}`
+    };
+    
+    setProjectData(prev => [newProject, ...prev]);
+    
+    // Reset form
+    setFormData({
+      code: '',
+      nachalo: '',
+      vidDeyatelnosti: 'Уголовное дело',
+      tema: '',
+      dlitelnost: '',
+      okruglenie: '15'
+    });
+    
+    setOpen(false);
+  };
+
   return (
     <div className="flex flex-col items-center justify-center p-4 bg-background">
       <div className="w-full max-w-4xl space-y-4">
         <Tabs defaultValue="autocomplete" className="w-full">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="autocomplete">Автокомплит</TabsTrigger>
             <TabsTrigger value="input">Автоподстановка</TabsTrigger>
             <TabsTrigger value="projects">Грид</TabsTrigger>
@@ -182,9 +229,106 @@ export default function DemoPage() {
           
           <TabsContent value="projects" className="mt-6">
             <div className="w-full space-y-4">
-              <div className="flex justify-end mb-4">
+              <div className="flex justify-end mb-4 gap-2">
+                <Dialog open={open} onOpenChange={setOpen}>
+                  <DialogTrigger asChild>
+                    <Button variant="default" size="sm">
+                      Добавить проект
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="sm:max-w-[550px]">
+                    <DialogHeader>
+                      <DialogTitle>Добавить новый проект</DialogTitle>
+                    </DialogHeader>
+                    <form onSubmit={handleSubmit} className="space-y-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="code">Код проекта</Label>
+                          <Input 
+                            id="code" 
+                            name="code" 
+                            value={formData.code} 
+                            onChange={handleInputChange} 
+                            required 
+                            placeholder="ГД-123/2024"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="nachalo">Начало</Label>
+                          <Input 
+                            id="nachalo" 
+                            name="nachalo" 
+                            type="date" 
+                            value={formData.nachalo} 
+                            onChange={handleInputChange} 
+                            required
+                          />
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="vidDeyatelnosti">Вид деятельности</Label>
+                        <select 
+                          id="vidDeyatelnosti"
+                          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                          value={formData.vidDeyatelnosti}
+                          onChange={(e) => handleSelectChange('vidDeyatelnosti', e.target.value)}
+                        >
+                          <option value="Уголовное дело">Уголовное дело</option>
+                          <option value="Гражданское дело">Гражданское дело</option>
+                          <option value="Административное дело">Административное дело</option>
+                        </select>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="tema">Тема</Label>
+                        <Input 
+                          id="tema" 
+                          name="tema" 
+                          value={formData.tema} 
+                          onChange={handleInputChange} 
+                          required 
+                          placeholder="Описание темы проекта"
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="dlitelnost">Длительность</Label>
+                          <Input 
+                            id="dlitelnost" 
+                            name="dlitelnost" 
+                            type="number" 
+                            value={formData.dlitelnost} 
+                            onChange={handleInputChange} 
+                            required 
+                            placeholder="90"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="okruglenie">Округление</Label>
+                          <select
+                            id="okruglenie"
+                            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                            value={formData.okruglenie}
+                            onChange={(e) => handleSelectChange('okruglenie', e.target.value)}
+                          >
+                            <option value="15">15</option>
+                            <option value="30">30</option>
+                          </select>
+                        </div>
+                      </div>
+                      
+                      <div className="flex justify-end gap-2 pt-4">
+                        <Button type="button" variant="outline" onClick={() => setOpen(false)}>Отмена</Button>
+                        <Button type="submit">Добавить</Button>
+                      </div>
+                    </form>
+                  </DialogContent>
+                </Dialog>
+                
                 <Button 
-                  onClick={() => handleExportCSV(projects)}
+                  onClick={() => handleExportCSV(projectData)}
                   variant="outline"
                   size="sm"
                 >
@@ -193,7 +337,7 @@ export default function DemoPage() {
               </div>
               <DataTable 
                 columns={projectColumns} 
-                data={projects}
+                data={projectData}
                 groupingOptions={["vidDeyatelnosti", "code"]}
               />
             </div>

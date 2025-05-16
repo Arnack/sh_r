@@ -245,6 +245,7 @@ export function DataTable<TData, TValue>({
             ) : (
               <TableRow>
                 <TableCell
+                  style={{ maxWidth: '180px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
                   colSpan={columns.length}
                   className="h-24 text-center"
                 >
