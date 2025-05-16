@@ -6,6 +6,7 @@ import { InputWithHistory } from "@/components/inputWithHistory"
 import { DataTable } from "@/components/DataTable2"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ColumnDef } from "@tanstack/react-table"
+import { Button } from "@/components/ui/button"
 
 const entities = [
     { code: "Acm Bs Corp", name: "Acme Business Corp" },
@@ -97,6 +98,59 @@ const projectColumns: ColumnDef<Project>[] = [
 ]
 
 export default function DemoPage() {
+  const handleExportCSV = (data: Project[]) => {
+    // Helper function to escape CSV values
+    const escapeCSV = (value: string) => {
+      if (value === null || value === undefined) return '';
+      const str = String(value);
+      // If the value contains a comma, newline, or double quote, enclose it in double quotes
+      if (str.includes(',') || str.includes('\n') || str.includes('"')) {
+        // Replace double quotes with two double quotes
+        return `"${str.replace(/"/g, '""')}"`;
+      }
+      return str;
+    };
+
+    // Get headers from column definitions
+    const headers = projectColumns.map(column => {
+      // Safely access header
+      return typeof column.header === 'string' 
+        ? column.header 
+        : '';
+    });
+    
+    // Convert data to CSV rows
+    const rows = data.map(item => {
+      return projectColumns.map(column => {
+        // Safely access accessor key using id when not directly accessible
+        const key = String(column.id || (column as any).accessorKey);
+        const value = item[key as keyof Project] || '';
+        return escapeCSV(String(value));
+      });
+    });
+    
+    // Combine headers and rows
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(row => row.join(','))
+    ].join('\n');
+    
+    // Add BOM (Byte Order Mark) for Excel to correctly display Cyrillic characters
+    const BOM = '\uFEFF';
+    const csvContentWithBOM = BOM + csvContent;
+    
+    // Create blob and download with encoding specified
+    const blob = new Blob([csvContentWithBOM], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', 'судебная_деятельность.csv');
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <div className="flex flex-col items-center justify-center p-4 bg-background">
       <div className="w-full max-w-4xl space-y-4">
@@ -128,6 +182,15 @@ export default function DemoPage() {
           
           <TabsContent value="projects" className="mt-6">
             <div className="w-full space-y-4">
+              <div className="flex justify-end mb-4">
+                <Button 
+                  onClick={() => handleExportCSV(projects)}
+                  variant="outline"
+                  size="sm"
+                >
+                  Экспорт в Excel
+                </Button>
+              </div>
               <DataTable 
                 columns={projectColumns} 
                 data={projects}
