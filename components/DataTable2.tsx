@@ -54,17 +54,29 @@ export function DataTable<TData, TValue>({
   const [expanded, setExpanded] = React.useState<ExpandedState>({})
   const [areAllExpanded, setAreAllExpanded] = React.useState(false)
 
-  const handleGroupingChange = (field: string | null) => {
+  const handleGroupingChange = (field: string | null, level: number) => {
+    const newGrouping = [...grouping]
     if (field === null) {
-      setGrouping([])
+      if (level === 0) {
+        setGrouping([])
+      } else {
+        newGrouping.splice(level, 1)
+        setGrouping(newGrouping)
+      }
     } else {
-      setGrouping([field])
-      setExpanded({})
-      setAreAllExpanded(false)
+      if (level === 0) {
+        setGrouping([field])
+      } else {
+        newGrouping[level] = field
+        setGrouping(newGrouping)
+      }
     }
+    setExpanded({})
+    setAreAllExpanded(false)
   }
 
   const currentGrouping = grouping[0] || null
+  const secondaryGrouping = grouping[1] || null
 
   const table = useReactTable({
     data,
@@ -140,26 +152,53 @@ export function DataTable<TData, TValue>({
               {areAllExpanded ? "Свернуть все" : "Развернуть все"}
             </Button>
           )}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" className="ml-auto">
-                {currentGrouping ? `Группировка: ${currentGrouping === 'vidDeyatelnosti' ? 'Вид деятельности' : 'Код'}` : "Группировать"} <ChevronDown className="ml-2 h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => handleGroupingChange(null)}>
-                Нет
-              </DropdownMenuItem>
-              {groupingOptions.map((option) => (
-                <DropdownMenuItem
-                  key={option}
-                  onClick={() => handleGroupingChange(option)}
-                >
-                  {option === 'vidDeyatelnosti' ? 'Вид деятельности' : 'Код'}
+          <div className="flex items-center gap-2">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" className="ml-auto">
+                  {currentGrouping ? `Группировка: ${currentGrouping === 'vidDeyatelnosti' ? 'Вид деятельности' : 'Код'}` : "Группировать"} <ChevronDown className="ml-2 h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => handleGroupingChange(null, 0)}>
+                  Нет
                 </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
+                {groupingOptions.map((option) => (
+                  <DropdownMenuItem
+                    key={option}
+                    onClick={() => handleGroupingChange(option, 0)}
+                  >
+                    {option === 'vidDeyatelnosti' ? 'Вид деятельности' : 'Код'}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            {currentGrouping && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline">
+                    {secondaryGrouping ? `Подгруппа: ${secondaryGrouping === 'vidDeyatelnosti' ? 'Вид деятельности' : 'Код'}` : "Подгруппа"} <ChevronDown className="ml-2 h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => handleGroupingChange(null, 1)}>
+                    Нет
+                  </DropdownMenuItem>
+                  {groupingOptions
+                    .filter(option => option !== currentGrouping)
+                    .map((option) => (
+                      <DropdownMenuItem
+                        key={option}
+                        onClick={() => handleGroupingChange(option, 1)}
+                      >
+                        {option === 'vidDeyatelnosti' ? 'Вид деятельности' : 'Код'}
+                      </DropdownMenuItem>
+                    ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+          </div>
         </div>
       </div>
       <div className="rounded-md border">
