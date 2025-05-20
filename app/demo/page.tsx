@@ -12,6 +12,9 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import * as XLSX from 'xlsx'
+import { Switch } from "@/components/ui/switch"
+
 
 const entities = [
     { code: "Acm Bs Corp", name: "Acme Business Corp" },
@@ -102,6 +105,14 @@ const projectColumns: ColumnDef<Project>[] = [
   },
 ]
 
+type ExcelStyleSettings = {
+  headerColor: string;
+  alternateRows: boolean;
+  alternateColor: string;
+  borders: boolean;
+  numberFormat: boolean;
+}
+
 export default function DemoPage() {
   const [projectData, setProjectData] = useState<Project[]>(projects);
   const [formData, setFormData] = useState<Omit<Project, 'id'>>({
@@ -113,58 +124,101 @@ export default function DemoPage() {
     okruglenie: '15'
   });
   const [open, setOpen] = useState(false);
+  const [excelSettingsOpen, setExcelSettingsOpen] = useState(false);
+  const [excelSettings, setExcelSettings] = useState<ExcelStyleSettings>({
+    headerColor: '#4F46E5', // Indigo color
+    alternateRows: true,
+    alternateColor: '#F3F4F6', // Light gray
+    borders: true,
+    numberFormat: true
+  });
 
-  const handleExportCSV = (data: Project[]) => {
-    // Helper function to escape CSV values
-    const escapeCSV = (value: string) => {
-      if (value === null || value === undefined) return '';
-      const str = String(value);
-      // If the value contains a comma, newline, or double quote, enclose it in double quotes
-      if (str.includes(',') || str.includes('\n') || str.includes('"')) {
-        // Replace double quotes with two double quotes
-        return `"${str.replace(/"/g, '""')}"`;
-      }
-      return str;
+  const handleExportXLSX = (data: Project[]) => {
+    // Create a new workbook
+    const wb = XLSX.utils.book_new();
+    
+    // Convert data to worksheet
+    const ws = XLSX.utils.json_to_sheet(data.map(item => ({
+      'Начало': item.nachalo,
+      'Код Проекта': item.code,
+      'Вид Деятельности': item.vidDeyatelnosti,
+      'Тема': item.tema,
+      'Длительность': item.dlitelnost,
+      'Округление': item.okruglenie
+    })));
+
+    // Set column widths
+    const colWidths = [
+      { wch: 12 }, // Начало
+      { wch: 15 }, // Код Проекта
+      { wch: 20 }, // Вид Деятельности
+      { wch: 40 }, // Тема
+      { wch: 12 }, // Длительность
+      { wch: 12 }, // Округление
+    ];
+    ws['!cols'] = colWidths;
+
+    // Add styling
+    const range = XLSX.utils.decode_range(ws['!ref'] || 'A1');
+    const headerStyle = {
+      fill: { fgColor: { rgb: excelSettings.headerColor.replace('#', '') } },
+      font: { bold: true, color: { rgb: 'FFFFFF' } },
+      alignment: { horizontal: 'center', vertical: 'center' },
+      border: excelSettings.borders ? {
+        top: { style: 'thin' },
+        bottom: { style: 'thin' },
+        left: { style: 'thin' },
+        right: { style: 'thin' }
+      } : undefined
     };
 
-    // Get headers from column definitions
-    const headers = projectColumns.map(column => {
-      // Safely access header
-      return typeof column.header === 'string' 
-        ? column.header 
-        : '';
-    });
-    
-    // Convert data to CSV rows
-    const rows = data.map(item => {
-      return projectColumns.map(column => {
-        // Safely access accessor key using id when not directly accessible
-        const key = String(column.id || (column as any).accessorKey);
-        const value = item[key as keyof Project] || '';
-        return escapeCSV(String(value));
-      });
-    });
-    
-    // Combine headers and rows
-    const csvContent = [
-      headers.join(','),
-      ...rows.map(row => row.join(','))
-    ].join('\n');
-    
-    // Add BOM (Byte Order Mark) for Excel to correctly display Cyrillic characters
-    const BOM = '\uFEFF';
-    const csvContentWithBOM = BOM + csvContent;
-    
-    // Create blob and download with encoding specified
-    const blob = new Blob([csvContentWithBOM], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.setAttribute('href', url);
-    link.setAttribute('download', 'судебная_деятельность.csv');
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    // Apply header style
+    for (let C = range.s.c; C <= range.e.c; ++C) {
+      const cellRef = XLSX.utils.encode_cell({ r: 0, c: C });
+      if (!ws[cellRef]) continue;
+      ws[cellRef].s = headerStyle;
+    }
+
+    // Apply alternating row colors
+    if (excelSettings.alternateRows) {
+      for (let R = range.s.r + 1; R <= range.e.r; ++R) {
+        if (R % 2 === 0) continue;
+        for (let C = range.s.c; C <= range.e.c; ++C) {
+          const cellRef = XLSX.utils.encode_cell({ r: R, c: C });
+          if (!ws[cellRef]) continue;
+          ws[cellRef].s = {
+            fill: { fgColor: { rgb: excelSettings.alternateColor.replace('#', '') } },
+            border: excelSettings.borders ? {
+              top: { style: 'thin' },
+              bottom: { style: 'thin' },
+              left: { style: 'thin' },
+              right: { style: 'thin' }
+            } : undefined
+          };
+        }
+      }
+    }
+
+    // Apply number formatting
+    if (excelSettings.numberFormat) {
+      const numberColumns = ['Длительность', 'Округление'];
+      for (let C = range.s.c; C <= range.e.c; ++C) {
+        const header = ws[XLSX.utils.encode_cell({ r: 0, c: C })].v;
+        if (numberColumns.includes(header)) {
+          for (let R = range.s.r + 1; R <= range.e.r; ++R) {
+            const cellRef = XLSX.utils.encode_cell({ r: R, c: C });
+            if (!ws[cellRef]) continue;
+            ws[cellRef].z = '#,##0';
+          }
+        }
+      }
+    }
+
+    // Add the worksheet to the workbook
+    XLSX.utils.book_append_sheet(wb, ws, "Судебная деятельность");
+
+    // Generate and download the file
+    XLSX.writeFile(wb, "судебная_деятельность.xlsx");
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -327,13 +381,99 @@ export default function DemoPage() {
                   </DialogContent>
                 </Dialog>
                 
-                <Button 
-                  onClick={() => handleExportCSV(projectData)}
-                  variant="outline"
-                  size="sm"
-                >
-                  Экспорт в Excel
-                </Button>
+                <Dialog open={excelSettingsOpen} onOpenChange={setExcelSettingsOpen}>
+                  <DialogTrigger asChild>
+                    <Button 
+                      variant="outline"
+                      size="sm"
+                    >
+                      Экспорт в Excel
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="sm:max-w-[425px]">
+                    <DialogHeader>
+                      <DialogTitle>Настройки экспорта Excel</DialogTitle>
+                    </DialogHeader>
+                    <div className="grid gap-4 py-4">
+                      <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="headerColor" className="text-right">
+                          Цвет заголовка
+                        </Label>
+                        <div className="col-span-3 flex items-center gap-2">
+                          <Input
+                            id="headerColor"
+                            type="color"
+                            value={excelSettings.headerColor}
+                            onChange={(e) => setExcelSettings(prev => ({ ...prev, headerColor: e.target.value }))}
+                            className="w-12 h-8 p-1"
+                          />
+                          <span className="text-sm text-muted-foreground">{excelSettings.headerColor}</span>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="alternateRows" className="text-right">
+                          Черезстрочный фон
+                        </Label>
+                        <div className="col-span-3 flex items-center gap-2">
+                          <Switch
+                            id="alternateRows"
+                            checked={excelSettings.alternateRows}
+                            onCheckedChange={(checked: boolean) => setExcelSettings(prev => ({ ...prev, alternateRows: checked }))}
+                          />
+                          {excelSettings.alternateRows && (
+                            <>
+                              <Input
+                                type="color"
+                                value={excelSettings.alternateColor}
+                                onChange={(e) => setExcelSettings(prev => ({ ...prev, alternateColor: e.target.value }))}
+                                className="w-12 h-8 p-1"
+                              />
+                              <span className="text-sm text-muted-foreground">{excelSettings.alternateColor}</span>
+                            </>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="borders" className="text-right">
+                          Границы
+                        </Label>
+                        <div className="col-span-3">
+                          <Switch
+                            id="borders"
+                            checked={excelSettings.borders}
+                            onCheckedChange={(checked: boolean) => setExcelSettings(prev => ({ ...prev, borders: checked }))}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="numberFormat" className="text-right">
+                          Формат чисел
+                        </Label>
+                        <div className="col-span-3">
+                          <Switch
+                            id="numberFormat"
+                            checked={excelSettings.numberFormat}
+                            onCheckedChange={(checked: boolean) => setExcelSettings(prev => ({ ...prev, numberFormat: checked }))}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex justify-end gap-2">
+                      <Button variant="outline" onClick={() => setExcelSettingsOpen(false)}>
+                        Отмена
+                      </Button>
+                      <Button onClick={() => {
+                        handleExportXLSX(projectData);
+                        setExcelSettingsOpen(false);
+                      }}>
+                        Экспорт
+                      </Button>
+                    </div>
+                  </DialogContent>
+                </Dialog>
               </div>
               <DataTable 
                 columns={projectColumns} 
