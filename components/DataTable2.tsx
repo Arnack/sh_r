@@ -34,7 +34,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { ChevronDown, ChevronRight, ArrowUp, ArrowDown } from "lucide-react"
+import { ChevronDown, ChevronRight, ArrowUp, ArrowDown, Filter } from "lucide-react"
 
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[]
@@ -137,12 +137,43 @@ export function DataTable<TData, TValue>({
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <Input
-          placeholder="Фильтровать все столбцы..."
-          value={globalFilter ?? ""}
-          onChange={(event) => setGlobalFilter(event.target.value)}
-          className="max-w-sm"
-        />
+        <div className="flex items-center gap-2">
+          <Input
+            placeholder="Фильтровать все столбцы..."
+            value={globalFilter ?? ""}
+            onChange={(event) => setGlobalFilter(event.target.value)}
+            className="max-w-sm"
+          />
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="icon">
+                <Filter className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="w-[200px]">
+              {table
+                .getAllColumns()
+                .filter((column) => column.getCanFilter())
+                .map((column) => {
+                  return (
+                    <div key={column.id} className="p-2">
+                      <div className="text-sm font-medium mb-2">
+                        {column.id === 'vidDeyatelnosti' ? 'Вид деятельности' : column.id === 'kod' ? 'Код' : column.id}
+                      </div>
+                      <Input
+                        placeholder={`Фильтр...`}
+                        value={(column.getFilterValue() as string) ?? ""}
+                        onChange={(event) =>
+                          column.setFilterValue(event.target.value)
+                        }
+                        className="h-8"
+                      />
+                    </div>
+                  )
+                })}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
         <div className="flex items-center gap-2">
           {currentGrouping && (
             <Button 
