@@ -115,6 +115,8 @@ type ExcelStyleSettings = {
 
 export default function DemoPage() {
   const [projectData, setProjectData] = useState<Project[]>(projects);
+  const [projectCols, setProjectCols] = useState<ColumnDef<Project>[]>(projectColumns);
+  const [groupingOpts, setGroupingOpts] = useState<string[]>(["vidDeyatelnosti", "code"]);
   const [formData, setFormData] = useState<Omit<Project, 'id'>>({
     code: '',
     nachalo: '',
@@ -252,6 +254,54 @@ export default function DemoPage() {
     setOpen(false);
   };
 
+  const regenerateData = () => {
+    // Generate new random project data
+    const vidTypes = ["Уголовное дело", "Гражданское дело", "Административное дело"];
+    const temaOptions = [
+      "Мошенничество в особо крупном размере", 
+      "Взыскание задолженности по договору",
+      "Оспаривание штрафа ГИБДД",
+      "Нарушение правил дорожного движения",
+      "Раздел имущества при разводе",
+      "Обжалование действий должностного лица",
+      "Кража со взломом",
+      "Защита прав потребителей",
+      "Нарушение правил торговли",
+      "Хулиганство"
+    ];
+    
+    const getRandomDate = () => {
+      const start = new Date(2024, 0, 1);
+      const end = new Date(2024, 11, 31);
+      const date = new Date(start.getTime() + Math.random() * (end.getTime() - start.getTime()));
+      return date.toISOString().split('T')[0];
+    };
+    
+    const newProjects = Array.from({ length: 10 }, (_, i) => {
+      const vidType = vidTypes[Math.floor(Math.random() * vidTypes.length)];
+      const prefix = vidType === "Уголовное дело" ? "УД" : 
+                    vidType === "Гражданское дело" ? "ГД" : "АД";
+      
+      return {
+        id: `PRJ${String(i + 1).padStart(3, '0')}`,
+        code: `${prefix}-${Math.floor(Math.random() * 900) + 100}/${2024}`,
+        nachalo: getRandomDate(),
+        vidDeyatelnosti: vidType,
+        tema: temaOptions[Math.floor(Math.random() * temaOptions.length)],
+        dlitelnost: String(Math.floor(Math.random() * 200) + 30),
+        okruglenie: Math.random() > 0.5 ? "15" : "30"
+      };
+    });
+    
+    setProjectData(newProjects);
+    
+    // Ensure columns match the data structure
+    setProjectCols(projectColumns);
+    
+    // Update grouping options if needed
+    setGroupingOpts(["vidDeyatelnosti", "code"]);
+  };
+
   return (
     <div className="flex flex-col items-center justify-center p-4 bg-background">
       <div className="w-full max-w-4xl space-y-4">
@@ -284,6 +334,9 @@ export default function DemoPage() {
           <TabsContent value="projects" className="mt-6">
             <div className="w-full space-y-4">
               <div className="flex justify-end mb-4 gap-2">
+                <Button variant="secondary" size="sm" onClick={regenerateData}>
+                  Регенерировать данные
+                </Button>
                 <Dialog open={open} onOpenChange={setOpen}>
                   <DialogTrigger asChild>
                     <Button variant="default" size="sm">
@@ -476,9 +529,9 @@ export default function DemoPage() {
                 </Dialog>
               </div>
               <DataTable 
-                columns={projectColumns} 
+                columns={projectCols} 
                 data={projectData}
-                groupingOptions={["vidDeyatelnosti", "code"]}
+                groupingOptions={groupingOpts}
               />
             </div>
           </TabsContent>
