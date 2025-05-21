@@ -54,6 +54,7 @@ export function DataTable<TData, TValue>({
   const [globalFilter, setGlobalFilter] = React.useState("")
   const [expanded, setExpanded] = React.useState<ExpandedState>({})
   const [areAllExpanded, setAreAllExpanded] = React.useState(false)
+  const [showFilters, setShowFilters] = React.useState(false)
 
   const handleGroupingChange = (field: string | null, level: number) => {
     const newGrouping = [...grouping]
@@ -144,35 +145,13 @@ export function DataTable<TData, TValue>({
             onChange={(event) => setGlobalFilter(event.target.value)}
             className="max-w-sm"
           />
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="icon">
-                <Filter className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="w-[200px]">
-              {table
-                .getAllColumns()
-                .filter((column) => column.getCanFilter())
-                .map((column) => {
-                  return (
-                    <div key={column.id} className="p-2">
-                      <div className="text-sm font-medium mb-2">
-                        {column.id === 'vidDeyatelnosti' ? 'Вид деятельности' : column.id === 'kod' ? 'Код' : column.id}
-                      </div>
-                      <Input
-                        placeholder={`Фильтр...`}
-                        value={(column.getFilterValue() as string) ?? ""}
-                        onChange={(event) =>
-                          column.setFilterValue(event.target.value)
-                        }
-                        className="h-8"
-                      />
-                    </div>
-                  )
-                })}
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <Button 
+            variant="outline" 
+            size="icon"
+            onClick={() => setShowFilters(!showFilters)}
+          >
+            <Filter className="h-4 w-4" />
+          </Button>
         </div>
         <div className="flex items-center gap-2">
           {currentGrouping && (
@@ -267,31 +246,53 @@ export function DataTable<TData, TValue>({
         <Table>
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow key={headerGroup.id}>
-                {headerGroup.headers.map((header) => {
-                  return (
-                    <TableHead key={header.id}>
-                      {header.isPlaceholder ? null : (
-                        <div className="flex items-center gap-1">
-                          <div
-                            className={`flex items-center ${header.column.getCanSort() ? 'cursor-pointer select-none' : ''}`}
-                            onClick={header.column.getToggleSortingHandler()}
-                          >
-                            {flexRender(
-                              header.column.columnDef.header,
-                              header.getContext()
-                            )}
-                            {{
-                              asc: <ArrowUp className="ml-2 h-4 w-4" />,
-                              desc: <ArrowDown className="ml-2 h-4 w-4" />,
-                            }[header.column.getIsSorted() as string] ?? null}
+              <React.Fragment key={headerGroup.id}>
+                <TableRow>
+                  {headerGroup.headers.map((header) => {
+                    return (
+                      <TableHead key={header.id}>
+                        {header.isPlaceholder ? null : (
+                          <div className="flex items-center gap-1">
+                            <div
+                              className={`flex items-center ${header.column.getCanSort() ? 'cursor-pointer select-none' : ''}`}
+                              onClick={header.column.getToggleSortingHandler()}
+                            >
+                              {flexRender(
+                                header.column.columnDef.header,
+                                header.getContext()
+                              )}
+                              {{
+                                asc: <ArrowUp className="ml-2 h-4 w-4" />,
+                                desc: <ArrowDown className="ml-2 h-4 w-4" />,
+                              }[header.column.getIsSorted() as string] ?? null}
+                            </div>
                           </div>
-                        </div>
-                      )}
-                    </TableHead>
-                  )
-                })}
-              </TableRow>
+                        )}
+                      </TableHead>
+                    )
+                  })}
+                </TableRow>
+                {showFilters && (
+                  <TableRow>
+                    {headerGroup.headers.map((header) => {
+                      return (
+                        <TableHead key={header.id}>
+                          {header.column.getCanFilter() ? (
+                            <Input
+                              placeholder={`Фильтр...`}
+                              value={(header.column.getFilterValue() as string) ?? ""}
+                              onChange={(event) =>
+                                header.column.setFilterValue(event.target.value)
+                              }
+                              className="h-8"
+                            />
+                          ) : null}
+                        </TableHead>
+                      )
+                    })}
+                  </TableRow>
+                )}
+              </React.Fragment>
             ))}
           </TableHeader>
           <TableBody>
