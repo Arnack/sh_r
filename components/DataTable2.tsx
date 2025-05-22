@@ -242,6 +242,7 @@ export function DataTable<TData, TValue>({
           </div>
         </div>
       </div>
+      
       <div className="rounded-md border">
         <Table>
           <TableHeader>
@@ -358,6 +359,47 @@ export function DataTable<TData, TValue>({
           </TableBody>
         </Table>
       </div>
+      
+      {/* Display active filters */}
+      {(globalFilter || columnFilters.length > 0) && (
+        <div className="flex flex-wrap gap-2 items-center text-sm text-muted-foreground">
+          <span>Активные фильтры:</span>
+          {globalFilter && (
+            <div className="flex items-center gap-1 bg-muted px-2 py-1 rounded">
+              <span>Все колонки: {globalFilter}</span>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-4 w-4 p-0"
+                onClick={() => setGlobalFilter("")}
+              >
+                ×
+              </Button>
+            </div>
+          )}
+          {columnFilters.map((filter) => {
+            const column = table.getColumn(filter.id);
+            if (!column) return null;
+            return (
+              <div key={filter.id} className="flex items-center gap-1 bg-muted px-2 py-1 rounded">
+                <span>
+                  {column.id === 'vidDeyatelnosti' ? 'Вид деятельности' : 
+                   column.id === 'code' ? 'Код' : column.id}: {String(filter.value)}
+                </span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-4 w-4 p-0"
+                  onClick={() => column.setFilterValue("")}
+                >
+                  ×
+                </Button>
+              </div>
+            );
+          })}
+        </div>
+      )}
+      
       {currentGrouping && (
         <div className="text-sm text-muted-foreground mt-2">
           <p>Группировка: {currentGrouping === 'vidDeyatelnosti' ? 'Вид деятельности' : 'Код'}</p>

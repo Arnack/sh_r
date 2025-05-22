@@ -304,15 +304,15 @@ export default function DemoPage() {
 
   return (
     <div className="flex flex-col items-center justify-center p-4 bg-background">
-      <div className="w-full max-w-4xl space-y-4">
+      <div className="w-full space-y-4">
         <Tabs defaultValue="autocomplete" className="w-full">
           <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="autocomplete">Автокомплит</TabsTrigger>
-            <TabsTrigger value="input">Автоподстановка</TabsTrigger>
+            {/* <TabsTrigger value="autocomplete">Автокомплит</TabsTrigger>
+            <TabsTrigger value="input">Автоподстановка</TabsTrigger> */}
             <TabsTrigger value="projects">Грид</TabsTrigger>
           </TabsList>
           
-          <TabsContent value="autocomplete" className="mt-6">
+          {/* <TabsContent value="autocomplete" className="mt-6">
             <div className="w-full space-y-4">
               <Autocomplete 
                 data={entities} 
@@ -329,7 +329,7 @@ export default function DemoPage() {
                 placeholder="Поиск по коду или названию"
               />
             </div>
-          </TabsContent>
+          </TabsContent> */}
           
           <TabsContent value="projects" className="mt-6">
             <div className="w-full space-y-4">
@@ -466,7 +466,7 @@ export default function DemoPage() {
 
                       <div className="grid grid-cols-4 items-center gap-4">
                         <Label htmlFor="alternateRows" className="text-right">
-                          Черезстрочный фон
+                         Строки
                         </Label>
                         <div className="col-span-3 flex items-center gap-2">
                           <Switch
@@ -501,18 +501,7 @@ export default function DemoPage() {
                         </div>
                       </div>
 
-                      <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="numberFormat" className="text-right">
-                          Формат чисел
-                        </Label>
-                        <div className="col-span-3">
-                          <Switch
-                            id="numberFormat"
-                            checked={excelSettings.numberFormat}
-                            onCheckedChange={(checked: boolean) => setExcelSettings(prev => ({ ...prev, numberFormat: checked }))}
-                          />
-                        </div>
-                      </div>
+                      
                     </div>
                     <div className="flex justify-end gap-2">
                       <Button variant="outline" onClick={() => setExcelSettingsOpen(false)}>
