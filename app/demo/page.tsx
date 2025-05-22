@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import * as XLSX from 'xlsx'
+import ExcelJS from 'exceljs'
 import { Switch } from "@/components/ui/switch"
 
 
@@ -135,92 +135,94 @@ export default function DemoPage() {
     numberFormat: true
   });
 
-  const handleExportXLSX = (data: Project[]) => {
+  const handleExportXLSX = async (data: Project[]) => {
     // Create a new workbook
-    const wb = XLSX.utils.book_new();
-    
-    // Convert data to worksheet
-    const ws = XLSX.utils.json_to_sheet(data.map(item => ({
-      'Начало': item.nachalo,
-      'Код Проекта': item.code,
-      'Вид Деятельности': item.vidDeyatelnosti,
-      'Тема': item.tema,
-      'Длительность': item.dlitelnost,
-      'Округление': item.okruglenie
-    })));
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet('Судебная деятельность');
 
     // Set column widths
-    const colWidths = [
-      { wch: 12 }, // Начало
-      { wch: 15 }, // Код Проекта
-      { wch: 20 }, // Вид Деятельности
-      { wch: 40 }, // Тема
-      { wch: 12 }, // Длительность
-      { wch: 12 }, // Округление
+    worksheet.columns = [
+      { header: 'Начало', key: 'nachalo', width: 12 },
+      { header: 'Код Проекта', key: 'code', width: 15 },
+      { header: 'Вид Деятельности', key: 'vidDeyatelnosti', width: 20 },
+      { header: 'Тема', key: 'tema', width: 40 },
+      { header: 'Длительность', key: 'dlitelnost', width: 12 },
+      { header: 'Округление', key: 'okruglenie', width: 12 }
     ];
-    ws['!cols'] = colWidths;
 
-    // Add styling
-    const range = XLSX.utils.decode_range(ws['!ref'] || 'A1');
-    const headerStyle = {
-      fill: { fgColor: { rgb: excelSettings.headerColor.replace('#', '') } },
-      font: { bold: true, color: { rgb: 'FFFFFF' } },
-      alignment: { horizontal: 'center', vertical: 'center' },
-      border: excelSettings.borders ? {
-        top: { style: 'thin' },
-        bottom: { style: 'thin' },
-        left: { style: 'thin' },
-        right: { style: 'thin' }
-      } : undefined
-    };
+    // Style the header row
+    worksheet.getRow(1).eachCell((cell) => {
+      cell.fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: excelSettings.headerColor.replace('#', '') }
+      };
+      cell.font = {
+        bold: true,
+        color: { argb: 'FFFFFFFF' },
+        size: 12
+      };
+      cell.alignment = {
+        vertical: 'middle',
+        horizontal: 'center'
+      };
+      if (excelSettings.borders) {
+        cell.border = {
+          top: { style: 'thin', color: { argb: '000000' } },
+          bottom: { style: 'thin', color: { argb: '000000' } },
+          left: { style: 'thin', color: { argb: '000000' } },
+          right: { style: 'thin', color: { argb: '000000' } }
+        };
+      }
+    });
 
-    // Apply header style
-    for (let C = range.s.c; C <= range.e.c; ++C) {
-      const cellRef = XLSX.utils.encode_cell({ r: 0, c: C });
-      if (!ws[cellRef]) continue;
-      ws[cellRef].s = headerStyle;
-    }
+    // Add data rows
+    data.forEach((item, index) => {
+      const row = worksheet.addRow({
+        nachalo: item.nachalo,
+        code: item.code,
+        vidDeyatelnosti: item.vidDeyatelnosti,
+        tema: item.tema,
+        dlitelnost: item.dlitelnost,
+        okruglenie: item.okruglenie
+      });
 
-    // Apply alternating row colors
-    if (excelSettings.alternateRows) {
-      for (let R = range.s.r + 1; R <= range.e.r; ++R) {
-        if (R % 2 === 0) continue;
-        for (let C = range.s.c; C <= range.e.c; ++C) {
-          const cellRef = XLSX.utils.encode_cell({ r: R, c: C });
-          if (!ws[cellRef]) continue;
-          ws[cellRef].s = {
-            fill: { fgColor: { rgb: excelSettings.alternateColor.replace('#', '') } },
-            border: excelSettings.borders ? {
-              top: { style: 'thin' },
-              bottom: { style: 'thin' },
-              left: { style: 'thin' },
-              right: { style: 'thin' }
-            } : undefined
+      // Style the row
+      row.eachCell((cell) => {
+        if (excelSettings.borders) {
+          cell.border = {
+            top: { style: 'thin', color: { argb: '000000' } },
+            bottom: { style: 'thin', color: { argb: '000000' } },
+            left: { style: 'thin', color: { argb: '000000' } },
+            right: { style: 'thin', color: { argb: '000000' } }
           };
         }
-      }
-    }
 
-    // Apply number formatting
-    if (excelSettings.numberFormat) {
-      const numberColumns = ['Длительность', 'Округление'];
-      for (let C = range.s.c; C <= range.e.c; ++C) {
-        const header = ws[XLSX.utils.encode_cell({ r: 0, c: C })].v;
-        if (numberColumns.includes(header)) {
-          for (let R = range.s.r + 1; R <= range.e.r; ++R) {
-            const cellRef = XLSX.utils.encode_cell({ r: R, c: C });
-            if (!ws[cellRef]) continue;
-            ws[cellRef].z = '#,##0';
-          }
+        // Apply alternating row colors
+        if (excelSettings.alternateRows && index % 2 === 1) {
+          cell.fill = {
+            type: 'pattern',
+            pattern: 'solid',
+            fgColor: { argb: excelSettings.alternateColor.replace('#', '') }
+          };
         }
-      }
-    }
 
-    // Add the worksheet to the workbook
-    XLSX.utils.book_append_sheet(wb, ws, "Судебная деятельность");
+        // Apply number formatting
+        if (excelSettings.numberFormat && (cell.address[0] === 'E' || cell.address[0] === 'F')) {
+          cell.numFmt = '#,##0';
+        }
+      });
+    });
 
     // Generate and download the file
-    XLSX.writeFile(wb, "судебная_деятельность.xlsx");
+    const buffer = await workbook.xlsx.writeBuffer();
+    const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'судебная_деятельность.xlsx';
+    a.click();
+    window.URL.revokeObjectURL(url);
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
