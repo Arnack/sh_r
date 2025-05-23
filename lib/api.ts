@@ -1,4 +1,4 @@
-import { CompanyBrowseRequest, CompanyBrowseResponse } from '@/types/api';
+import { CompanyBrowseRequest, CompanyBrowseResponse, CompanyFilters } from '@/types/api';
 
 // Use local API route instead of external URL to avoid CORS issues
 const API_BASE_URL = '/api';
@@ -28,8 +28,39 @@ const DEFAULT_REQUEST: CompanyBrowseRequest = {
   CompanyStatusID: null,
   View: 0,
   ShowMine: true,
-  ShowOnlyOpen: false
+  ShowOnlyOpen: false,
+  Page: 1,
+  PageSize: 50,
 };
+
+export interface PaginationOptions {
+  page?: number;
+  pageSize?: number;
+  sortBy?: string;
+  sortDirection?: 'asc' | 'desc';
+}
+
+export interface FilterOptions {
+  showMine?: boolean;
+  showOnlyOpen?: boolean;
+  stateSelector?: number;
+  contractSelector?: number;
+  companyStatusSelector?: number;
+  employeeID?: number | null;
+  companyStatusID?: number | null;
+}
+
+export interface SearchOptions {
+  query?: string;
+  searchFields?: string[];
+}
+
+export interface AdvancedQueryOptions {
+  pagination?: PaginationOptions;
+  filters?: FilterOptions;
+  advancedFilters?: CompanyFilters;
+  search?: SearchOptions;
+}
 
 export class ApiService {
   private static async makeRequest<T>(
@@ -95,15 +126,10 @@ export class ApiService {
     });
   }
 
-  static async browseCompaniesWithFilters(filters: {
-    showMine?: boolean;
-    showOnlyOpen?: boolean;
-    stateSelector?: number;
-    contractSelector?: number;
-    companyStatusSelector?: number;
-    employeeID?: number | null;
-    companyStatusID?: number | null;
-  }): Promise<CompanyBrowseResponse> {
+  static async browseCompaniesWithFilters(
+    filters: FilterOptions,
+    pagination?: PaginationOptions
+  ): Promise<CompanyBrowseResponse> {
     const customRequest: Partial<CompanyBrowseRequest> = {
       ShowMine: filters.showMine,
       ShowOnlyOpen: filters.showOnlyOpen,
@@ -112,8 +138,100 @@ export class ApiService {
       CompanyStatusSelector: filters.companyStatusSelector,
       EmployeeID: filters.employeeID,
       CompanyStatusID: filters.companyStatusID,
+      Page: pagination?.page,
+      PageSize: pagination?.pageSize,
+      SortBy: pagination?.sortBy,
+      SortDirection: pagination?.sortDirection,
     };
 
     return this.browseCompanies(customRequest);
+  }
+
+  // New method for paginated requests
+  static async browseCompaniesPaginated(
+    filters: FilterOptions = {},
+    pagination: PaginationOptions = {}
+  ): Promise<CompanyBrowseResponse> {
+    return this.browseCompaniesWithFilters(filters, pagination);
+  }
+
+  // New comprehensive query method with all server-side capabilities
+  static async queryCompanies(options: AdvancedQueryOptions = {}): Promise<CompanyBrowseResponse> {
+    const { pagination, filters, advancedFilters, search } = options;
+    
+    const customRequest: Partial<CompanyBrowseRequest> = {
+      // Basic filters
+      ShowMine: filters?.showMine,
+      ShowOnlyOpen: filters?.showOnlyOpen,
+      StateSelector: filters?.stateSelector,
+      ContractSelector: filters?.contractSelector,
+      CompanyStatusSelector: filters?.companyStatusSelector,
+      EmployeeID: filters?.employeeID,
+      CompanyStatusID: filters?.companyStatusID,
+      
+      // Pagination and sorting
+      Page: pagination?.page,
+      PageSize: pagination?.pageSize,
+      SortBy: pagination?.sortBy,
+      SortDirection: pagination?.sortDirection,
+      
+      // Search
+      Search: search?.query,
+      SearchFields: search?.searchFields,
+      
+      // Advanced filters
+      Filters: advancedFilters,
+    };
+
+    return this.browseCompanies(customRequest);
+  }
+
+  // Simplified search method
+  static async searchCompanies(
+    query: string,
+    options: {
+      searchFields?: string[];
+      pagination?: PaginationOptions;
+      filters?: FilterOptions;
+    } = {}
+  ): Promise<CompanyBrowseResponse> {
+    return this.queryCompanies({
+      search: {
+        query,
+        searchFields: options.searchFields,
+      },
+      pagination: options.pagination,
+      filters: options.filters,
+    });
+  }
+
+  // Method with advanced filtering
+  static async filterCompanies(
+    advancedFilters: CompanyFilters,
+    options: {
+      pagination?: PaginationOptions;
+      filters?: FilterOptions;
+      search?: SearchOptions;
+    } = {}
+  ): Promise<CompanyBrowseResponse> {
+    return this.queryCompanies({
+      advancedFilters,
+      pagination: options.pagination,
+      filters: options.filters,
+      search: options.search,
+    });
+  }
+
+  // Cache management methods
+  static async clearCache(): Promise<void> {
+    await this.makeRequest('/cache', {
+      method: 'DELETE',
+    });
+  }
+
+  static async getCacheStats(): Promise<any> {
+    return this.makeRequest('/cache', {
+      method: 'GET',
+    });
   }
 } 

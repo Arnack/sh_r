@@ -14,6 +14,36 @@ export interface CompanyBrowseRequest {
   View: number;
   ShowMine: boolean;
   ShowOnlyOpen: boolean;
+  // Pagination parameters
+  Page?: number;
+  PageSize?: number;
+  SortBy?: string;
+  SortDirection?: 'asc' | 'desc';
+  // Advanced filtering and search
+  Search?: string;
+  SearchFields?: string[];
+  Filters?: CompanyFilters;
+}
+
+export interface CompanyFilters {
+  fileAs?: string;
+  legalName?: string;
+  legalCode?: string;
+  kpp?: string;
+  phone?: string;
+  email?: string;
+  city?: string;
+  country?: string;
+  industries?: string;
+  createdFrom?: string;
+  createdTo?: string;
+  modifiedFrom?: string;
+  modifiedTo?: string;
+  applyVAT?: boolean;
+  isPrivate?: boolean;
+  hasEmail?: boolean;
+  hasPhone?: boolean;
+  hasWebPage?: boolean;
 }
 
 export interface Company {
@@ -92,8 +122,32 @@ export interface PropertyValue {
   Value: string;
 }
 
+export interface PaginationMeta {
+  currentPage: number;
+  pageSize: number;
+  totalItems: number;
+  totalPages: number;
+  hasNextPage: boolean;
+  hasPreviousPage: boolean;
+  startItem: number;
+  endItem: number;
+}
+
 export interface CompanyBrowseResponse {
   Companies: Company[];
   Properties: Property[];
   PropertyValues: PropertyValue[];
+  // Add pagination metadata and search info
+  Pagination?: PaginationMeta;
+  SearchInfo?: {
+    query: string;
+    fieldsSearched: string[];
+    totalMatches: number;
+    searchTime: number;
+  };
+  CacheInfo?: {
+    hit: boolean;
+    key: string;
+    expiresAt: string;
+  };
 } 

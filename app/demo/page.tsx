@@ -4,6 +4,7 @@
 import Autocomplete from "@/components/acml3"
 import { InputWithHistory } from "@/components/inputWithHistory"
 import { DataTable } from "@/components/DataTable2"
+import { AdvancedSearch } from "@/components/AdvancedSearch"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ColumnDef } from "@tanstack/react-table"
 import { Button } from "@/components/ui/button"
@@ -15,8 +16,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import * as XLSX from 'xlsx'
 import { Switch } from "@/components/ui/switch"
 import { useCompanies } from "@/lib/hooks/useCompanies"
-import { Company } from "@/types/api"
-import { AlertCircle, Loader2, RefreshCw } from "lucide-react"
+import { Company, CompanyFilters } from "@/types/api"
+import { AlertCircle, Loader2, RefreshCw, TrendingUp, Database, Clock } from "lucide-react"
+import { Pagination } from "@/components/ui/pagination"
 
 // Dynamic import for ExcelJS (to avoid server-side rendering issues)
 import dynamic from 'next/dynamic'
@@ -210,16 +212,23 @@ export default function DemoPage() {
     error: companiesError,
     refetch: refetchCompanies,
     fetchWithFilters: fetchCompaniesWithFilters,
-    totalCount: companiesCount,
+    totalItems: companiesCount,
+    currentPage,
+    pageSize,
+    totalPages,
+    goToPage,
+    changePageSize,
+    sortData,
+    clearCache,
+    search: searchCompanies,
+    filterAdvanced: filterCompaniesAdvanced,
+    clearFilters: clearCompaniesFilters,
+    searchInfo,
+    cacheInfo,
   } = useCompanies({
     autoFetch: true,
     ...companyFilters,
   });
-
-  // Automatically refetch when filters change
-  useEffect(() => {
-    fetchCompaniesWithFilters(companyFilters);
-  }, [companyFilters, fetchCompaniesWithFilters]);
 
   const handleExportXLSX = async (data: Project[]) => {
     try {
@@ -419,6 +428,21 @@ export default function DemoPage() {
     
     // Update grouping options if needed
     setGroupingOpts(["vidDeyatelnosti", "code"]);
+  };
+
+  // Handle search
+  const handleCompanySearch = (query: string, searchFields: string[]) => {
+    searchCompanies(query, searchFields);
+  };
+
+  // Handle advanced filtering
+  const handleCompanyFilter = (filters: CompanyFilters) => {
+    filterCompaniesAdvanced(filters);
+  };
+
+  // Handle clear all filters and search
+  const handleClearAll = () => {
+    clearCompaniesFilters();
   };
 
   return (
@@ -626,6 +650,43 @@ export default function DemoPage() {
 
           <TabsContent value="companies" className="mt-6">
             <div className="w-full space-y-4">
+              {/* Advanced Search and Filters */}
+              <AdvancedSearch
+                onSearch={handleCompanySearch}
+                onFilter={handleCompanyFilter}
+                onClear={handleClearAll}
+                loading={companiesLoading}
+                searchInfo={searchInfo}
+              />
+
+              {/* Metadata Cards */}
+              {(searchInfo || cacheInfo) && (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {searchInfo && (
+                    <Card>
+                      <CardContent className="flex items-center gap-2 pt-4">
+                        <TrendingUp className="h-4 w-4 text-green-500" />
+                        <div className="text-sm">
+                          <div className="font-medium">Поиск: {searchInfo.totalMatches} результатов</div>
+                          <div className="text-muted-foreground">за {searchInfo.searchTime}мс</div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+                  
+                  {cacheInfo && (
+                    <div className="flex items-center gap-2 pt-4">
+                        <Database className="h-4 w-4 text-blue-500" />
+                        <div className="text-sm">
+                          <div className="font-medium">Кэш: {cacheInfo.hit ? <span className="text-green-500">Попадание</span> : <span className="text-red-500">Промах</span>}</div>
+                          <div className="text-muted-foreground">до {new Date(cacheInfo.expiresAt).toLocaleTimeString()}</div>
+                        </div>
+                    </div>
+                  )}
+                  
+                </div>
+              )}
+
               {/* Company filters and controls */}
               <div className="flex justify-between items-center mb-4">
                 <div className="flex items-center gap-4">
@@ -652,7 +713,16 @@ export default function DemoPage() {
                   <Button 
                     variant="outline" 
                     size="sm" 
-                    onClick={() => fetchCompaniesWithFilters(companyFilters)}
+                    onClick={clearCache}
+                    disabled={companiesLoading}
+                    title="Очистить кэш и обновить данные"
+                  >
+                    🗑️ Кэш
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={refetchCompanies}
                     disabled={companiesLoading}
                   >
                     {companiesLoading ? (
@@ -662,9 +732,6 @@ export default function DemoPage() {
                     )}
                     Обновить
                   </Button>
-                  <span className="text-sm text-muted-foreground">
-                    Всего: {companiesCount}
-                  </span>
                 </div>
               </div>
 
@@ -690,11 +757,24 @@ export default function DemoPage() {
 
               {/* Companies data table */}
               {!companiesLoading && companies.length > 0 && (
-                <DataTable 
-                  columns={companyColumns} 
-                  data={companies}
-                  groupingOptions={["Industries", "City", "FileAs"]}
-                />
+                <>
+                  <DataTable 
+                    columns={companyColumns} 
+                    data={companies}
+                    groupingOptions={["Industries", "City", "FileAs"]}
+                  />
+                  
+                  {/* Pagination */}
+                  <Pagination
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    totalItems={companiesCount}
+                    pageSize={pageSize}
+                    onPageChange={goToPage}
+                    onPageSizeChange={changePageSize}
+                    loading={companiesLoading}
+                  />
+                </>
               )}
 
               {/* No data state */}
